@@ -24,7 +24,7 @@ namespace Octopus.Cli.Commands.Releases
             this.commandOutputProvider = commandOutputProvider;
         }
 
-        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag)
+        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag, string versionPreReleaseTagFallBack)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (project == null) throw new ArgumentNullException(nameof(project));
@@ -59,11 +59,24 @@ namespace Octopus.Cli.Commands.Releases
 
                     var filters = BuildChannelVersionFilters(unresolved.ActionName, unresolved.PackageReferenceName, channel);
                     filters["packageId"] = unresolved.PackageId;
+
                     if (!string.IsNullOrWhiteSpace(versionPreReleaseTag))
                         filters["preReleaseTag"] = versionPreReleaseTag;
 
                     var packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
                     var latestPackage = packages.FirstOrDefault();
+
+
+
+                    if (latestPackage == null && !string.IsNullOrWhiteSpace(versionPreReleaseTag) && !string.IsNullOrWhiteSpace(versionPreReleaseTagFallBack)) {
+                        commandOutputProvider.Debug("Could not find latest package with pre-release '{Tag:l}' for step: {StepName:l}, falling back to search with pre-release '{FallBackTag:l}' ", versionPreReleaseTag, unresolved.ActionName, versionPreReleaseTagFallBack);                     
+                        filters["preReleaseTag"] = versionPreReleaseTagFallBack;
+                        
+                        packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
+                        latestPackage = packages.FirstOrDefault();
+
+                    }
+
 
                     if (latestPackage == null)
                     {
