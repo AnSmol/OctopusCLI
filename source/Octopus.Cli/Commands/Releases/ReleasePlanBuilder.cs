@@ -70,7 +70,7 @@ namespace Octopus.Cli.Commands.Releases
 
                     if (latestPackage == null && !string.IsNullOrWhiteSpace(versionPreReleaseTag) && !string.IsNullOrWhiteSpace(versionPreReleaseTagFallBacks)) {
                         commandOutputProvider.Debug("Could not find latest package with pre-release '{Tag:l}' for step: {StepName:l}, falling back to search with pre-release tags '{FallBackTags:l}' ", versionPreReleaseTag, unresolved.ActionName, versionPreReleaseTagFallBacks);
-                        string[] versionPreReleaseTagFallBacksArr = versionPreReleaseTagFallBacks.Split(';');
+                        string[] versionPreReleaseTagFallBacksArr = versionPreReleaseTagFallBacks.Split(',');
 
                         foreach (string versionPreReleaseTagFallBack in versionPreReleaseTagFallBacksArr) {
                             filters["preReleaseTag"] = versionPreReleaseTagFallBack.Trim();
