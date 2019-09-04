@@ -4,9 +4,9 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <PackAsTool>True</PackAsTool>
-    <AssemblyName>dotnet-octo</AssemblyName>
+    <AssemblyName>dotnet-fortis-octo</AssemblyName>
     
-    <PackageId>Octopus.DotNet.Cli</PackageId>
+    <PackageId>Octopus.DotNet.Fortis.Cli</PackageId>
     <Authors>Octopus Deploy</Authors>
     <Copyright>Octopus Deploy Pty Ltd</Copyright>
     <PackageIconUrl>http://i.octopusdeploy.com/resources/Avatar3-32x32.png</PackageIconUrl>
@@ -20,6 +20,7 @@
 
     <PackageType>DotnetCliTool</PackageType>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Version>6.13.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

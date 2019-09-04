@@ -24,7 +24,7 @@ namespace Octopus.Cli.Commands.Releases
             this.commandOutputProvider = commandOutputProvider;
         }
 
-        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag, string versionPreReleaseTagFallBack)
+        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag, string versionPreReleaseTagFallBacks)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (project == null) throw new ArgumentNullException(nameof(project));
@@ -68,12 +68,17 @@ namespace Octopus.Cli.Commands.Releases
 
 
 
-                    if (latestPackage == null && !string.IsNullOrWhiteSpace(versionPreReleaseTag) && !string.IsNullOrWhiteSpace(versionPreReleaseTagFallBack)) {
-                        commandOutputProvider.Debug("Could not find latest package with pre-release '{Tag:l}' for step: {StepName:l}, falling back to search with pre-release '{FallBackTag:l}' ", versionPreReleaseTag, unresolved.ActionName, versionPreReleaseTagFallBack);                     
-                        filters["preReleaseTag"] = versionPreReleaseTagFallBack;
+                    if (latestPackage == null && !string.IsNullOrWhiteSpace(versionPreReleaseTag) && !string.IsNullOrWhiteSpace(versionPreReleaseTagFallBacks)) {
+                        commandOutputProvider.Debug("Could not find latest package with pre-release '{Tag:l}' for step: {StepName:l}, falling back to search with pre-release tags '{FallBackTags:l}' ", versionPreReleaseTag, unresolved.ActionName, versionPreReleaseTagFallBacks);
+                        string[] versionPreReleaseTagFallBacksArr = versionPreReleaseTagFallBacks.Split(';');
+
+                        foreach (string versionPreReleaseTagFallBack in versionPreReleaseTagFallBacksArr) {
+                            filters["preReleaseTag"] = versionPreReleaseTagFallBack.Trim();
+                            packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
+                            latestPackage = packages.FirstOrDefault();
+                            if (latestPackage != null) { break; }
+                        }
                         
-                        packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
-                        latestPackage = packages.FirstOrDefault();
 
                     }
 

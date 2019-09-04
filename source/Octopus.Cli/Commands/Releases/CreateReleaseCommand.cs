@@ -42,7 +42,7 @@ namespace Octopus.Cli.Commands.Releases
             options.Add("ignoreexisting", "[Optional, Flag] Don't create this release if there is already one with the same version number.", v => IgnoreIfAlreadyExists = true);
             options.Add("ignorechannelrules", "[Optional, Flag] Create the release ignoring any version rules specified by the channel.", v => IgnoreChannelRules = true);
             options.Add("packageprerelease=", "[Optional] Pre-release for latest version of all packages to use for this release.", v => VersionPreReleaseTag = v);
-            options.Add("packageprereleasefallback=", "[Optional] Pre-release fallback, in case of regular packageprerelease does not match.", v => VersionPreReleaseTagFallBack = v);
+            options.Add("packageprereleasefallbacks=", "[Optional] Semicolon-separated pre-release fallback tags, evaluate sequentally until first match. In case of regular packageprerelease does not match.", v => versionPreReleaseTagFallBacks = v);
             options.Add("whatif", "[Optional, Flag] Perform a dry run but don't actually create/deploy release.", v => WhatIf = true);
 
             options = Options.For("Deployment");
@@ -55,7 +55,7 @@ namespace Octopus.Cli.Commands.Releases
         public bool IgnoreIfAlreadyExists { get; set; }
         public bool IgnoreChannelRules { get; set; }
         public string VersionPreReleaseTag { get; set; }
-        public string VersionPreReleaseTagFallBack { get; set; }
+        public string versionPreReleaseTagFallBacks { get; set; }
         public bool WhatIf { get; set; }
         
 
@@ -194,7 +194,7 @@ namespace Octopus.Cli.Commands.Releases
                 commandOutputProvider.Information("Building release plan for channel '{Channel:l}'...", ChannelNameOrId);
                 var matchingChannel = await Repository.Channels.FindByNameOrIdOrFail(project, ChannelNameOrId).ConfigureAwait(false);
 
-                return await releasePlanBuilder.Build(Repository, project, matchingChannel, VersionPreReleaseTag, VersionPreReleaseTagFallBack).ConfigureAwait(false);
+                return await releasePlanBuilder.Build(Repository, project, matchingChannel, VersionPreReleaseTag, versionPreReleaseTagFallBacks).ConfigureAwait(false);
             }
 
             // All Octopus 3.2+ servers should have the Channels hypermedia link, we should use the channel information
@@ -207,7 +207,7 @@ namespace Octopus.Cli.Commands.Releases
             
             // Compatibility: this has to cater for Octopus before Channels existed
             commandOutputProvider.Information("Building release plan without a channel for Octopus Server without channels support...");
-            return await releasePlanBuilder.Build(Repository, project, null, VersionPreReleaseTag, VersionPreReleaseTagFallBack).ConfigureAwait(false);
+            return await releasePlanBuilder.Build(Repository, project, null, VersionPreReleaseTag, versionPreReleaseTagFallBacks).ConfigureAwait(false);
         }
 
         private Task<bool> ServerSupportsChannels()
@@ -225,7 +225,7 @@ namespace Octopus.Cli.Commands.Releases
             {
                 commandOutputProvider.Information("Building a release plan for Channel '{Channel:l}'...", channel.Name);
 
-                var plan = await releasePlanBuilder.Build(Repository, project, channel, VersionPreReleaseTag, VersionPreReleaseTagFallBack).ConfigureAwait(false);
+                var plan = await releasePlanBuilder.Build(Repository, project, channel, VersionPreReleaseTag, versionPreReleaseTagFallBacks).ConfigureAwait(false);
                 releasePlans.Add(plan);
                 if (plan.ChannelHasAnyEnabledSteps() == false)
                 {
