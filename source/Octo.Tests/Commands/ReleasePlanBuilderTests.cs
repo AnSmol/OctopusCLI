@@ -305,7 +305,7 @@ namespace Octo.Tests.Commands
 
         private async Task<ReleasePlan> ExecuteBuildAsync()
         {
-            return await builder.Build(repository, projectResource, channelResource, versionPreReleaseTag: string.Empty, versionPreReleaseTagFallBacks: string.Empty);
+            return await builder.Build(repository, projectResource, channelResource, versionPreReleaseTag: string.Empty, versionPreReleaseTagFallBacks: string.Empty, GetLatestByPublishDate: false);
         }
     }
 

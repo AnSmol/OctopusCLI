@@ -24,7 +24,7 @@ namespace Octopus.Cli.Commands.Releases
             this.commandOutputProvider = commandOutputProvider;
         }
 
-        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag, string versionPreReleaseTagFallBacks)
+        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag, string versionPreReleaseTagFallBacks, bool GetLatestByPublishDate)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (project == null) throw new ArgumentNullException(nameof(project));
@@ -64,8 +64,10 @@ namespace Octopus.Cli.Commands.Releases
                         filters["preReleaseTag"] = versionPreReleaseTag;
 
                     var packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
-                    var latestPackage = packages.FirstOrDefault();
 
+                    //get latest published package for release instead of package has bigger SemVer
+                    var latestPackage = GetLatestByPublishDate ? packages.OrderByDescending(o => o.Published).FirstOrDefault(): packages.FirstOrDefault();
+                    
 
 
                     if (latestPackage == null && !string.IsNullOrWhiteSpace(versionPreReleaseTag) && !string.IsNullOrWhiteSpace(versionPreReleaseTagFallBacks)) {
@@ -75,7 +77,10 @@ namespace Octopus.Cli.Commands.Releases
                         foreach (string versionPreReleaseTagFallBack in versionPreReleaseTagFallBacksArr) {
                             filters["preReleaseTag"] = versionPreReleaseTagFallBack.Trim();
                             packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
-                            latestPackage = packages.FirstOrDefault();
+
+                            //get latest published package for release instead of package has bigger SemVer
+                            latestPackage = GetLatestByPublishDate ? packages.OrderByDescending(o => o.Published).FirstOrDefault() : packages.FirstOrDefault();
+
                             if (latestPackage != null) { break; }
                         }
                         
