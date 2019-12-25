@@ -24,7 +24,7 @@ namespace Octopus.Cli.Commands.Releases
             this.commandOutputProvider = commandOutputProvider;
         }
 
-        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag, string versionPreReleaseTagFallBacks, bool GetLatestByPublishDate)
+        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag, string versionPreReleaseTagFallBacks, bool LatestByPublishDate)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (project == null) throw new ArgumentNullException(nameof(project));
@@ -40,6 +40,12 @@ namespace Octopus.Cli.Commands.Releases
             if (plan.UnresolvedSteps.Any())
             {
                 commandOutputProvider.Debug("The package version for some steps was not specified. Going to try and resolve those automatically...");
+
+                if (LatestByPublishDate)
+                {
+                    commandOutputProvider.Warning("\"--latestbypublishdate\" flag was specified. Package resolver is going to choose found packages by the latest publishing date instead of the higest SemVer version.");
+                }
+                
                 foreach (var unresolved in plan.UnresolvedSteps)
                 {
                     if (!unresolved.IsResolveable)
@@ -66,7 +72,7 @@ namespace Octopus.Cli.Commands.Releases
                     var packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
 
                     //get latest published package for release instead of package has bigger SemVer
-                    var latestPackage = GetLatestByPublishDate ? packages.OrderByDescending(o => o.Published).FirstOrDefault(): packages.FirstOrDefault();
+                    var latestPackage = LatestByPublishDate ? packages.OrderByDescending(o => o.Published).FirstOrDefault(): packages.FirstOrDefault();
                     
 
 
@@ -79,7 +85,7 @@ namespace Octopus.Cli.Commands.Releases
                             packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
 
                             //get latest published package for release instead of package has bigger SemVer
-                            latestPackage = GetLatestByPublishDate ? packages.OrderByDescending(o => o.Published).FirstOrDefault() : packages.FirstOrDefault();
+                            latestPackage = LatestByPublishDate ? packages.OrderByDescending(o => o.Published).FirstOrDefault() : packages.FirstOrDefault();
 
                             if (latestPackage != null) { break; }
                         }
