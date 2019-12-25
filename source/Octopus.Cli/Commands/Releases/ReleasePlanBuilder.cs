@@ -71,7 +71,7 @@ namespace Octopus.Cli.Commands.Releases
 
                     var packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
 
-                    //get latest published package for release instead of package has bigger SemVer
+                    //get the latest published package for release instead of package has the biggest SemVer
                     var latestPackage = LatestByPublishDate ? packages.OrderByDescending(o => o.Published).FirstOrDefault(): packages.FirstOrDefault();
                     
 

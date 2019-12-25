@@ -43,7 +43,7 @@ namespace Octopus.Cli.Commands.Releases
             options.Add("ignorechannelrules", "[Optional, Flag] Create the release ignoring any version rules specified by the channel.", v => IgnoreChannelRules = true);
             options.Add("packageprerelease=", "[Optional] Pre-release for latest version of all packages to use for this release.", v => VersionPreReleaseTag = v);
             options.Add("packageprereleasefallbacks=", "[Optional] Comma-separated pre-release fallback tags, evaluate sequentally until first match. In case of regular packageprerelease does not match.", v => versionPreReleaseTagFallBacks = v);
-            options.Add("latestbypublishdate=", "[Optional, Flag] Choose latest published packages instead of packages with greater SemVer.", v => LatestByPublishDate = true);
+            options.Add("latestbypublishdate=", "[Optional, Flag] Choose the latest published packages instead of packages with the biggest SemVer.", v => LatestByPublishDate = true);
             options.Add("whatif", "[Optional, Flag] Perform a dry run but don't actually create/deploy release.", v => WhatIf = true);
 
             options = Options.For("Deployment");
