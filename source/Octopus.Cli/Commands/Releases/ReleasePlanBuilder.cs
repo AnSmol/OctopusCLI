@@ -64,16 +64,23 @@ namespace Octopus.Cli.Commands.Releases
                     if (!string.IsNullOrWhiteSpace(versionPreReleaseTag))
                         filters["preReleaseTag"] = versionPreReleaseTag;
 
-                    var packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
-                    PackageResource latestPackage;
-
                     
-                    bool WasFilterLookingForPreReleasePackage = !(string.IsNullOrWhiteSpace(versionPreReleaseTag) || versionPreReleaseTag == "^$");
+                    bool ResolverLooksForPreReleasePackage = !(string.IsNullOrWhiteSpace(versionPreReleaseTag) || versionPreReleaseTag == "^$");
 
+
+                    //As we can't sort by publishing date on the server side, we have to take all packages and sort them on the client side
+                    if (LatestByPublishDate && ResolverLooksForPreReleasePackage)
+                        filters["take"] = 10000;
+
+
+                    var packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
+
+
+                    PackageResource latestPackage;
                     //Get the latest published package for release instead of the package has the biggest SemVer
                     //Only for pre-release packages and only if LatestByPublishDate prop specified
                     //Using latest published package is inappropriate for release packages, because hotfix releases for old versions may be pushed after main major versions.
-                    if (LatestByPublishDate && WasFilterLookingForPreReleasePackage) {
+                    if (LatestByPublishDate && ResolverLooksForPreReleasePackage) {
                         latestPackage = packages.OrderByDescending(o => o.Published).FirstOrDefault();
                         if (latestPackage != null) { commandOutputProvider.Debug("'--latestbypublishdate' flag was specified. Package resolver will choose version of package '{PackageId:l}' by the latest publishing date instead of the higest SemVer version.", unresolved.ActionName, latestPackage.PackageId); }
                     } else {
@@ -84,20 +91,30 @@ namespace Octopus.Cli.Commands.Releases
 
                     if (latestPackage == null && !string.IsNullOrWhiteSpace(versionPreReleaseTag) && !string.IsNullOrWhiteSpace(versionPreReleaseTagFallBacks)) {
                         commandOutputProvider.Debug("Could not find latest package with pre-release '{Tag:l}' for step: {StepName:l}, falling back to search with pre-release tags '{FallBackTags:l}' ", versionPreReleaseTag, unresolved.ActionName, versionPreReleaseTagFallBacks);
+                        //trim values and remove empty ones
                         List<string> versionPreReleaseTagFallBacksList = versionPreReleaseTagFallBacks.Split(',').ToList().Select(s => s.Trim()).ToList();
+                        versionPreReleaseTagFallBacksList = versionPreReleaseTagFallBacksList.Where(s => !string.IsNullOrWhiteSpace(s)).Distinct().ToList();
+
                         foreach (string versionPreReleaseTagFallBack in versionPreReleaseTagFallBacksList) {
+                            //similar beahaviour as for general versionPreReleaseTag
+                            //Get the latest published package for release instead of the package has the biggest SemVer
+                            filters.Remove("take");
+
                             filters["preReleaseTag"] = versionPreReleaseTagFallBack;
+
+                            ResolverLooksForPreReleasePackage = !(versionPreReleaseTagFallBack == "^$");
+
+                            //As we can't sort by publishing date on the server side, we have to take all packages and sort them on the client side
+                            if (LatestByPublishDate && ResolverLooksForPreReleasePackage)
+                                filters["take"] = 10000;
 
                             packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
 
-                            //same beahaviour as for general versionPreReleaseTag
-                            WasFilterLookingForPreReleasePackage = !(string.IsNullOrWhiteSpace(versionPreReleaseTagFallBack) || versionPreReleaseTagFallBack == "^$");
-                            if (LatestByPublishDate && WasFilterLookingForPreReleasePackage)
+                            if (LatestByPublishDate && ResolverLooksForPreReleasePackage)
                             {
                                 latestPackage = packages.OrderByDescending(o => o.Published).FirstOrDefault();
                                 if (latestPackage != null) { commandOutputProvider.Debug("'--latestbypublishdate' flag was specified. Package resolver will choose version of package '{PackageId:l}' by the latest publishing date instead of the higest SemVer version.", unresolved.ActionName, latestPackage.PackageId); }
                             }
-                           
                             else
                             {
                                 latestPackage = packages.FirstOrDefault();
