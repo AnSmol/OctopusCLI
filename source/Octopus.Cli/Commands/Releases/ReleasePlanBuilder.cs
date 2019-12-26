@@ -68,14 +68,14 @@ namespace Octopus.Cli.Commands.Releases
                     PackageResource latestPackage;
 
                     
-                    bool NotEmptyPreReleaseTag = !(string.IsNullOrWhiteSpace(versionPreReleaseTag) || versionPreReleaseTag == "^$");
+                    bool WasFilterLookingForPreReleasePackage = !(string.IsNullOrWhiteSpace(versionPreReleaseTag) || versionPreReleaseTag == "^$");
 
-                    //Get the latest published package for release instead of package has the biggest SemVer
+                    //Get the latest published package for release instead of the package has the biggest SemVer
                     //Only for pre-release packages and only if LatestByPublishDate prop specified
-                    //Using latest published package is inappropriate for release packages, because hotfix releases for old versions may be pushed after main major version.
-                    if (LatestByPublishDate && NotEmptyPreReleaseTag) {
+                    //Using latest published package is inappropriate for release packages, because hotfix releases for old versions may be pushed after main major versions.
+                    if (LatestByPublishDate && WasFilterLookingForPreReleasePackage) {
                         latestPackage = packages.OrderByDescending(o => o.Published).FirstOrDefault();
-                        if (latestPackage != null) { commandOutputProvider.Debug("'--latestbypublishdate' flag was specified. Package resolver will choose version of package '{PackageId:l}' by the latest publishing date instead of the higest SemVer version.", unresolved.ActionName, latestPackage.PackageId); }
+                        if (latestPackage != null) { commandOutputProvider.Warning("'--latestbypublishdate' flag was specified. Package resolver will choose version of package '{PackageId:l}' by the latest publishing date instead of the higest SemVer version.", unresolved.ActionName, latestPackage.PackageId); }
                     } else {
                         latestPackage = packages.FirstOrDefault();
                     }
@@ -83,20 +83,19 @@ namespace Octopus.Cli.Commands.Releases
 
 
                     if (latestPackage == null && !string.IsNullOrWhiteSpace(versionPreReleaseTag) && !string.IsNullOrWhiteSpace(versionPreReleaseTagFallBacks)) {
-                        commandOutputProvider.Debug("Could not find latest package with pre-release '{Tag:l}' for step: {StepName:l}, falling back to search with pre-release tags '{FallBackTags:l}' ", versionPreReleaseTag, unresolved.ActionName, versionPreReleaseTagFallBacks);
+                        commandOutputProvider.Warning("Could not find latest package with pre-release '{Tag:l}' for step: {StepName:l}, falling back to search with pre-release tags '{FallBackTags:l}' ", versionPreReleaseTag, unresolved.ActionName, versionPreReleaseTagFallBacks);
                         List<string> versionPreReleaseTagFallBacksList = versionPreReleaseTagFallBacks.Split(',').ToList().Select(s => s.Trim()).ToList();
                         foreach (string versionPreReleaseTagFallBack in versionPreReleaseTagFallBacksList) {
                             filters["preReleaseTag"] = versionPreReleaseTagFallBack;
 
                             packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
 
-
-                            bool NotEmptyPreReleaseTagFallBack = !(string.IsNullOrWhiteSpace(versionPreReleaseTagFallBack) || versionPreReleaseTagFallBack == "^$");
                             //same beahaviour as for general versionPreReleaseTag
-                            if (LatestByPublishDate && NotEmptyPreReleaseTagFallBack)
+                            WasFilterLookingForPreReleasePackage = !(string.IsNullOrWhiteSpace(versionPreReleaseTagFallBack) || versionPreReleaseTagFallBack == "^$");
+                            if (LatestByPublishDate && WasFilterLookingForPreReleasePackage)
                             {
                                 latestPackage = packages.OrderByDescending(o => o.Published).FirstOrDefault();
-                                if (latestPackage != null) { commandOutputProvider.Debug("'--latestbypublishdate' flag was specified. Package resolver will choose version of package '{PackageId:l}' by the latest publishing date instead of the higest SemVer version.", unresolved.ActionName, latestPackage.PackageId); }
+                                if (latestPackage != null) { commandOutputProvider.Warning("'--latestbypublishdate' flag was specified. Package resolver will choose version of package '{PackageId:l}' by the latest publishing date instead of the higest SemVer version.", unresolved.ActionName, latestPackage.PackageId); }
                             }
                            
                             else
