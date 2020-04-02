@@ -28,7 +28,7 @@ namespace Octopus.Cli.Commands.Releases
 
         public string Version { get; private set; }
 
-        public string VersionSource { get; private set; }
+        public string VersionSource { get;  private set; }
 
         public ChannelVersionRuleTestResult ChannelVersionRuleTestResult { get; private set; }
 
@@ -37,6 +37,12 @@ namespace Octopus.Cli.Commands.Releases
             Version = version;
             VersionSource = "Latest available";
         }
+        public void SetVersionFromLatest(string version, String versionsource)
+        {
+            Version = version;
+            VersionSource = versionsource;
+        }
+
 
         public void SetChannelVersionRuleTestResult(ChannelVersionRuleTestResult result)
         {

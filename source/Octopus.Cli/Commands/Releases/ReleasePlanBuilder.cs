@@ -24,7 +24,7 @@ namespace Octopus.Cli.Commands.Releases
             this.commandOutputProvider = commandOutputProvider;
         }
 
-        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag, string versionPreReleaseTagFallBacks, bool LatestByPublishDate)
+        public async Task<ReleasePlan> Build(IOctopusAsyncRepository repository, ProjectResource project, ChannelResource channel, string versionPreReleaseTag, string versionPreReleaseTagFallBacks, string softDefaultPackageVersion, bool LatestByPublishDate)
         {
             if (repository == null) throw new ArgumentNullException(nameof(repository));
             if (project == null) throw new ArgumentNullException(nameof(project));
@@ -57,14 +57,39 @@ namespace Octopus.Cli.Commands.Releases
                     var feed = await repository.Feeds.Get(unresolved.PackageFeedId).ConfigureAwait(false);
                     if (feed == null)
                         throw new CommandException(string.Format("Could not find a feed with ID {0}, which is used by step: " + unresolved.ActionName, unresolved.PackageFeedId));
+                    var packages = new System.Collections.Generic.List<Octopus.Client.Model.PackageResource>();
+                    PackageResource latestPackage;
+                    String versionSource = "Unspecified";
 
                     var filters = BuildChannelVersionFilters(unresolved.ActionName, unresolved.PackageReferenceName, channel);
                     filters["packageId"] = unresolved.PackageId;
 
+                    //look for exact version of package specified softDefaultPackageVersion, bypass all further version-seeking heurstics if succeed
+                    if (!string.IsNullOrWhiteSpace(softDefaultPackageVersion)) {
+                        filters["versionRange"] = "[" + softDefaultPackageVersion + "]";
+                        packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
+                        latestPackage = packages.FirstOrDefault();
+                        if (latestPackage != null)
+                        {
+                            commandOutputProvider.Debug("Luckily, selected '{PackageId:l}' version '{Version:l}' for '{StepName:l}' was found using softDefaultPackageVersion specified. Any further version-seeking heurstics will be bypassed.", latestPackage.PackageId, latestPackage.Version, unresolved.ActionName);
+                            versionSource = "softDefaultPackageVersion";
+                            unresolved.SetVersionFromLatest(latestPackage.Version, versionSource);
+                            continue;
+                        }
+                        else { 
+                            filters.Remove("versionRange");
+                            commandOutputProvider.Debug("Could not find package with softDefaultPackageVersion '{Tag:l}' for step: {StepName:l}, falling back to search with another specified methods (versionPreReleaseTag,versionPreReleaseTagFallBacks)", softDefaultPackageVersion, unresolved.ActionName);
+                        }
+
+                    }
+                    
+
+
+
                     if (!string.IsNullOrWhiteSpace(versionPreReleaseTag))
                         filters["preReleaseTag"] = versionPreReleaseTag;
-
                     
+
                     bool ResolverLooksForPreReleasePackage = !(string.IsNullOrWhiteSpace(versionPreReleaseTag) || versionPreReleaseTag == "^$");
 
 
@@ -73,10 +98,10 @@ namespace Octopus.Cli.Commands.Releases
                         filters["take"] = 10000;
 
 
-                    var packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
+                    packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
 
 
-                    PackageResource latestPackage;
+                    
                     //Get the latest published package for release instead of the package has the biggest SemVer
                     //Only for pre-release packages and only if LatestByPublishDate prop specified
                     //Using latest published package is inappropriate for release packages, because hotfix releases for old versions may be pushed after main major versions.
@@ -86,6 +111,7 @@ namespace Octopus.Cli.Commands.Releases
                     } else {
                         latestPackage = packages.FirstOrDefault();
                     }
+                    versionSource = "versionPreReleaseTag";
 
 
 
@@ -113,14 +139,17 @@ namespace Octopus.Cli.Commands.Releases
                             if (LatestByPublishDate && ResolverLooksForPreReleasePackage)
                             {
                                 latestPackage = packages.OrderByDescending(o => o.Published).FirstOrDefault();
-                                if (latestPackage != null) { commandOutputProvider.Debug("'--latestbypublishdate' flag was specified. Package resolver will choose version of package '{PackageId:l}' by the latest publishing date instead of the higest SemVer version.", unresolved.ActionName, latestPackage.PackageId); }
+                                if (latestPackage != null) { commandOutputProvider.Debug("'--latestbypublishdate' flag was specified. Package resolver will choose version of package '{PackageId:l}' by the latest publishing date instead of the higest SemVer version.", unresolved.ActionName, latestPackage.PackageId); }                                
                             }
                             else
                             {
                                 latestPackage = packages.FirstOrDefault();
                             }
                             
-                            if (latestPackage != null) { break; }
+                            if (latestPackage != null) {
+                                versionSource = "versionPreReleaseTagFallBacks";
+                                break; 
+                            }
                         }
                         
 
@@ -134,7 +163,7 @@ namespace Octopus.Cli.Commands.Releases
                     else
                     {
                         commandOutputProvider.Debug("Selected '{PackageId:l}' version '{Version:l}' for '{StepName:l}'", latestPackage.PackageId, latestPackage.Version, unresolved.ActionName);
-                        unresolved.SetVersionFromLatest(latestPackage.Version);
+                        unresolved.SetVersionFromLatest(latestPackage.Version, versionSource);
                     }
                 }
             }
