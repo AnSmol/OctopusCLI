@@ -100,7 +100,12 @@ namespace Octopus.Cli.Commands.Releases
 
                     //As we can't sort by publishing date on the server side, we have to take all packages and sort them on the client side
                     if (LatestByPublishDate && ResolverLooksForPreReleasePackage)
+                    {
                         filters["take"] = 10000;
+                    } else {
+                    //AIR-1533. Speed-up package choosing 
+                        filters["take"] = 1;
+                    }
 
 
                     packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
@@ -135,9 +140,17 @@ namespace Octopus.Cli.Commands.Releases
 
                             ResolverLooksForPreReleasePackage = !(versionPreReleaseTagFallBack == "^$");
 
+
                             //As we can't sort by publishing date on the server side, we have to take all packages and sort them on the client side
                             if (LatestByPublishDate && ResolverLooksForPreReleasePackage)
+                            {
                                 filters["take"] = 10000;
+                            }
+                            else
+                            {
+                            //AIR-1533. Speed-up package choosing 
+                                filters["take"] = 1;
+                            }
 
                             packages = await repository.Client.Get<List<PackageResource>>(feed.Link("SearchTemplate"), filters).ConfigureAwait(false);
 
