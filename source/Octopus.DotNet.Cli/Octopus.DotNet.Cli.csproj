@@ -20,8 +20,7 @@
 
     <PackageType>DotnetCliTool</PackageType>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-    <Version>6.13.8</Version>
-    <Version>6.13.9</Version>
+    <Version>6.13.10</Version>
   </PropertyGroup>
 
   <ItemGroup>
